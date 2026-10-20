@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เช็คอิน vs Print — สรุปตาม Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#E8F5FF;
+    --bg-2:#FFF4E0;
+    --panel:#FFFFFF;
+    --panel-2:#F2F9FF;
+    --text:#1F2A44;
+    --muted:#6B7A99;
+    --border:#CFE3F5;
+    --accent:#FF7A59;
+    --accent-ink:#FFFFFF;
+    --sky:#4DA3FF;
+    --sun:#FFC83D;
+    --mint:#2FC9A8;
+    --pink:#FF8FB8;
+    --teal:#13A58C;
+    --danger:#E5484D;
+    --danger-bg:#FFE9EA;
+    --ok:#1FA37A;
+    --shadow: 0 4px 14px rgba(77,163,255,0.14);
+    --split-dark:#1F2A44;
+    --cloud:#FFFFFF;
+    --stage-1:#DDF0FF;
+    --stage-2:#F6FBFF;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#101A2E; --bg-2:#16213A; --panel:#1A2742; --panel-2:#15213A; --text:#EAF1FF;
+      --muted:#97A7C8; --border:#2B3B5E; --accent:#FF8B6C; --accent-ink:#101A2E;
+      --sky:#6DB4FF; --sun:#FFD25E; --mint:#4FDDBF; --pink:#FF9CC2;
+      --teal:#4FDDBF; --danger:#FF7A7F; --danger-bg:#3A1D25; --ok:#5FDDB0; --split-dark:#EAF1FF;
+      --cloud:#27375C; --stage-1:#1F3158; --stage-2:#182646; --shadow:0 4px 14px rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#101A2E; --bg-2:#16213A; --panel:#1A2742; --panel-2:#15213A; --text:#EAF1FF;
+    --muted:#97A7C8; --border:#2B3B5E; --accent:#FF8B6C; --accent-ink:#101A2E;
+    --sky:#6DB4FF; --sun:#FFD25E; --mint:#4FDDBF; --pink:#FF9CC2;
+    --teal:#4FDDBF; --danger:#FF7A7F; --danger-bg:#3A1D25; --ok:#5FDDB0; --split-dark:#EAF1FF;
+    --cloud:#27375C; --stage-1:#1F3158; --stage-2:#182646; --shadow:0 4px 14px rgba(0,0,0,0.3);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:linear-gradient(180deg,var(--bg) 0%, var(--bg) 55%, var(--bg-2) 100%);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:'IBM Plex Sans Thai','Noto Sans Thai',system-ui,-apple-system,sans-serif;
+    line-height:1.5; min-height:100vh; padding:28px 18px 60px; position:relative; overflow-x:hidden;
+  }
+  h1,h2,.tab-btn,.btn{ font-family:'Prompt','IBM Plex Sans Thai',system-ui,sans-serif; }
+  .mono{ font-family:'IBM Plex Mono','SFMono-Regular',Consolas,monospace; font-variant-numeric: tabular-nums; }
+  .wrap{ max-width:920px; margin:0 auto; position:relative; z-index:1; }
+
+  /* floating clouds */
+  .sky{ position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .cloud{ position:absolute; fill:var(--cloud); opacity:.85; animation:drift linear infinite; }
+  .cloud.c1{ top:6%;  width:150px; animation-duration:70s; left:-200px; }
+  .cloud.c2{ top:30%; width:110px; animation-duration:95s; left:-200px; animation-delay:-40s; opacity:.7; }
+  .cloud.c3{ top:68%; width:170px; animation-duration:85s; left:-220px; animation-delay:-20s; opacity:.6; }
+  @keyframes drift{ from{ transform:translateX(0);} to{ transform:translateX(calc(100vw + 400px)); } }
+
+  header.top{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    margin-bottom:22px; flex-wrap:wrap;
+    background:linear-gradient(120deg,#4DA3FF 0%,#7CC4FF 55%,#B6E1FF 100%);
+    border-radius:20px; padding:18px 22px; box-shadow:var(--shadow); color:#fff; position:relative; overflow:hidden;
+  }
+  header.top::after{
+    content:""; position:absolute; right:-30px; top:-30px; width:130px; height:130px; border-radius:50%;
+    background:rgba(255,255,255,.18);
+  }
+  .title-wrap{ display:flex; align-items:center; gap:14px; min-width:0; }
+  .mascot{ width:84px; height:105px; flex:none; animation:bob 3s ease-in-out infinite; }
+  .mascot svg{ width:100%; height:100%; display:block; }
+  .title-block h1{ font-size:23px; font-weight:700; margin:0 0 4px; letter-spacing:-0.01em; color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.08); }
+  .title-block p{ margin:0; color:rgba(255,255,255,.92); font-size:14px; max-width:520px; }
+  .flight-tag{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text);
+    border-radius:10px; padding:7px 12px; z-index:1;
+    background:#fff; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.1);
+  }
+  .flight-tag b{ font-weight:600; }
+
+  .dropzone{
+    background:var(--panel); border:2px dashed var(--sky); border-radius:18px;
+    padding:34px 20px; text-align:center; cursor:pointer;
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    box-shadow:var(--shadow);
+  }
+  .dropzone:hover{ transform:translateY(-2px); }
+  .dropzone.drag{ border-color:var(--accent); background:var(--panel-2); }
+  .dropzone .icon{
+    width:52px;height:52px;margin:0 auto 12px; border-radius:16px;
+    background:linear-gradient(135deg,var(--accent),var(--sun)); color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px; font-family:'IBM Plex Mono',monospace; font-weight:600;
+    transform:rotate(-6deg);
+  }
+  .dropzone p{ margin:0; font-size:15px; font-weight:500; }
+  .dropzone .hint{ color:var(--muted); font-size:13px; margin-top:6px; }
+  .dropzone input{ display:none; }
+
+  .filebar{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    padding:12px 16px; margin-top:10px; font-size:13.5px; gap:10px; box-shadow:var(--shadow);
+  }
+  .filebar .name{ color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .filebar button{
+    background:none; border:1px solid var(--border); color:var(--text);
+    border-radius:100px; padding:6px 14px; font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  .filebar button:hover{ border-color:var(--accent); color:var(--accent); }
+
+  .error{
+    background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger);
+    border-radius:12px; padding:14px 16px; font-size:14px; margin-top:16px;
+  }
+
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:24px 0 20px; }
+  .stat{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    padding:16px 16px 14px; box-shadow:var(--shadow); border-top:5px solid var(--sky);
+  }
+  .stat:nth-child(2){ border-top-color:var(--pink); }
+  .stat:nth-child(3){ border-top-color:var(--mint); }
+  .stat:nth-child(4){ border-top-color:var(--sun); }
+  .stat .num{ font-family:'Prompt','IBM Plex Mono',monospace; font-size:28px; font-weight:700; line-height:1; }
+  .stat .num.danger{ color:var(--danger); }
+  .stat .num.ok{ color:var(--teal); }
+  .stat .label{ color:var(--muted); font-size:12px; margin-top:6px; }
+
+  .toolbar{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-bottom:14px; flex-wrap:wrap;
+  }
+  .tabs{ display:flex; gap:6px; background:var(--panel); border:1px solid var(--border); border-radius:100px; padding:5px; box-shadow:var(--shadow); }
+  .tab-btn{
+    font-size:13.5px; font-weight:600; color:var(--muted);
+    background:none; border:none; border-radius:100px; padding:8px 16px; cursor:pointer;
+  }
+  .tab-btn.active{ background:linear-gradient(135deg,var(--sky),#7CC4FF); color:#fff; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    margin:0 0 10px; flex-wrap:wrap;
+  }
+  .section-head h2{ font-size:17px; margin:0; font-weight:600; }
+  .section-head .sub{ color:var(--muted); font-size:13px; }
+
+  .board{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    overflow:hidden; box-shadow:var(--shadow);
+  }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  thead th{
+    text-align:left; padding:11px 14px; font-size:12px; font-weight:600;
+    color:var(--muted); border-bottom:1px solid var(--border); background:var(--panel-2);
+  }
+  thead th.num-col, tbody td.num-col{ text-align:right; }
+  tbody td{ padding:11px 14px; border-bottom:1px solid var(--border); }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:nth-child(even) td{ background:color-mix(in srgb, var(--panel-2) 60%, transparent); }
+  tbody td.seq{ font-family:'IBM Plex Mono',monospace; color:var(--muted); }
+  tbody td.seat{ font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--danger); }
+  tbody td.count{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  tbody td.rank{ width:44px; text-align:center; font-size:17px; color:var(--muted); font-family:'IBM Plex Mono',monospace; }
+  tbody tr:hover td{ background:var(--panel-2); }
+  tbody tr.total-row td{ font-weight:700; border-top:2px solid var(--border); border-bottom:none; background:var(--panel-2); }
+  .badge{
+    display:inline-block; font-size:11px; font-weight:600; padding:2px 9px;
+    border-radius:100px; margin-left:8px; background:var(--sky); color:#fff;
+  }
+  .bar-wrap{ display:flex; align-items:center; gap:10px; }
+  .bar-track{ flex:1; height:8px; background:var(--panel-2); border-radius:6px; overflow:hidden; }
+  .bar-fill{ height:100%; background:linear-gradient(90deg,var(--mint),var(--sky)); border-radius:6px; }
+
+  .empty-ok{ padding:26px 20px 30px; text-align:center; color:var(--muted); font-size:14px; }
+  .empty-ok .mascot{ margin:0 auto 6px; width:96px; height:120px; }
+  .empty-ok .big{ font-size:26px; color:var(--ok); font-family:'Prompt',sans-serif; font-weight:700; margin-bottom:4px; }
+
+  .actions{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .btn{
+    font-size:13.5px; font-weight:600; border-radius:100px;
+    padding:10px 18px; cursor:pointer; border:1px solid transparent; transition:transform .12s ease;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-primary{ background:linear-gradient(135deg,var(--accent),#FFA24A); color:var(--accent-ink); box-shadow:0 3px 8px rgba(255,122,89,.35); }
+  .btn-primary:hover{ opacity:.95; }
+  .btn-ghost{ background:var(--panel); border-color:var(--border); color:var(--text); }
+  .btn-ghost:hover{ border-color:var(--accent); color:var(--accent); }
+  .btn[disabled]{ opacity:.5; cursor:not-allowed; }
+
+  /* ===== Podium ===== */
+  .stage{
+    background:linear-gradient(180deg,var(--stage-1) 0%, var(--stage-2) 100%);
+    border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow);
+    padding:0 18px 0; margin-bottom:18px; overflow:hidden; position:relative;
+  }
+  .flap-board{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:#1F2A44; color:#FFD25E; margin:0 -18px 18px; padding:9px 20px;
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:.14em;
+  }
+  .flap-board .dots{ display:flex; gap:5px; }
+  .flap-board .dots i{ width:7px; height:7px; border-radius:50%; background:#FF8FB8; display:block; }
+  .flap-board .dots i:nth-child(2){ background:#FFD25E; }
+  .flap-board .dots i:nth-child(3){ background:#4FDDBF; }
+  .stage-deco{ position:absolute; top:52px; width:46px; opacity:.7; }
+  .stage-deco.l{ left:14px; } .stage-deco.r{ right:14px; }
+  .podium{ display:flex; align-items:flex-end; justify-content:center; gap:10px; padding-top:6px; }
+  .pcol{ flex:1; max-width:230px; display:flex; flex-direction:column; align-items:center; min-width:0; }
+  .pinfo{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    padding:6px 12px; text-align:center; margin-bottom:6px; max-width:100%; box-shadow:var(--shadow);
+  }
+  .pinfo .pname{ font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:170px; }
+  .pinfo .pcount{ font-family:'Prompt',sans-serif; font-size:20px; font-weight:700; line-height:1.2; }
+  .pinfo .psub{ font-size:11px; color:var(--muted); }
+  .pchar{ width:min(124px,27vw); margin-bottom:-8px; z-index:2; animation:bob 3s ease-in-out infinite; }
+  .pcol.rank-1 .pchar{ width:min(144px,30vw); animation-delay:-.6s; }
+  .pcol.rank-3 .pchar{ animation-delay:-1.4s; }
+  .pchar svg{ width:100%; height:auto; display:block; }
+  @keyframes bob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-4px);} }
+  .pblock{
+    width:100%; border-radius:14px 14px 0 0; display:flex; align-items:flex-start; justify-content:center;
+    padding-top:10px; font-family:'Prompt',sans-serif; font-weight:700; font-size:34px; color:#fff;
+    position:relative; z-index:1; box-shadow:inset 0 -10px 0 rgba(0,0,0,.06), inset 0 6px 0 rgba(255,255,255,.35);
+  }
+  .rank-1 .pblock{ height:128px; background:linear-gradient(180deg,#FFD84D,#FFB62E); }
+  .rank-2 .pblock{ height:96px;  background:linear-gradient(180deg,#C9D6E6,#9FB3CB); }
+  .rank-3 .pblock{ height:72px;  background:linear-gradient(180deg,#FFB48A,#F28B5C); }
+  .pblock .pnum{ text-shadow:0 2px 0 rgba(0,0,0,.12); }
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+    background:var(--split-dark); color:var(--bg); padding:10px 18px;
+    border-radius:100px; font-size:13.5px; opacity:0; pointer-events:none;
+    transition:opacity .2s ease; z-index:10;
+  }
+  .toast.show{ opacity:1; }
+
+  footer{ margin-top:30px; color:var(--muted); font-size:12.5px; text-align:center; }
+
+  @media (prefers-reduced-motion: reduce){
+    .cloud, .mascot, .pchar{ animation:none; }
+  }
+  @media (max-width:640px){
+    .stats{ grid-template-columns:1fr 1fr; }
+    .toolbar{ flex-direction:column; align-items:stretch; }
+    .mascot{ width:64px; height:80px; }
+    .pblock{ font-size:26px; }
+    .rank-1 .pblock{ height:104px; } .rank-2 .pblock{ height:78px; } .rank-3 .pblock{ height:58px; }
+    .pinfo .pname{ max-width:92px; }
+    .stage-deco{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sky" aria-hidden="true">
+  <svg class="cloud c1" viewBox="0 0 120 50"><path d="M25 45a18 18 0 0 1 2-36 24 24 0 0 1 46-4 20 20 0 0 1 22 18 14 14 0 0 1 0 22z"/></svg>
+  <svg class="cloud c2" viewBox="0 0 120 50"><path d="M25 45a18 18 0 0 1 2-36 24 24 0 0 1 46-4 20 20 0 0 1 22 18 14 14 0 0 1 0 22z"/></svg>
+  <svg class="cloud c3" viewBox="0 0 120 50"><path d="M25 45a18 18 0 0 1 2-36 24 24 0 0 1 46-4 20 20 0 0 1 22 18 14 14 0 0 1 0 22z"/></svg>
+</div>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="title-wrap">
+      <div class="mascot" id="heroMascot"></div>
+      <div class="title-block">
+        <h1>เช็คอิน vs Print — สรุปตาม Agent</h1>
+        <p>อัปโหลดไฟล์ EventsLog เพื่อดูรายชื่อที่เช็คอินออนไลน์แล้วแต่ยังไม่ print และสรุปจำนวนที่เช็คอินของแต่ละ agent</p>
+      </div>
+    </div>
+    <div class="flight-tag" id="flightTag" style="display:none;"></div>
+  </header>
+
+  <div id="uploadArea">
+    <div class="dropzone" id="dropzone" tabindex="0">
+      <div class="icon">XLS</div>
+      <p>ลากไฟล์ EventsLog มาวาง หรือคลิกเพื่อเลือกไฟล์</p>
+      <div class="hint">รองรับไฟล์ .xls ที่ export จากระบบ (SpreadsheetML)</div>
+      <input type="file" id="fileInput" accept=".xls,.xml">
+    </div>
+    <div class="filebar" id="filebar" style="display:none;">
+      <span class="name" id="fileName"></span>
+      <button id="clearBtn" type="button">เปลี่ยนไฟล์</button>
+    </div>
+  </div>
+
+  <div id="errorBox"></div>
+  <div id="results" style="display:none;"></div>
+
+  <footer>ประมวลผลทั้งหมดในเบราว์เซอร์ของคุณ — ไม่มีการอัปโหลดไฟล์ออกจากเครื่อง</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const NS = 'urn:schemas-microsoft-com:office:spreadsheet';
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const filebar = document.getElementById('filebar');
+const fileNameEl = document.getElementById('fileName');
+const clearBtn = document.getElementById('clearBtn');
+const errorBox = document.getElementById('errorBox');
+const resultsEl = document.getElementById('results');
+const flightTag = document.getElementById('flightTag');
+const toastEl = document.getElementById('toast');
+
+let currentNotPrinted = [];
+let currentAgentSummary = [];
+let currentFlightLabel = '';
+
+/* ================= Cartoon characters ================= */
+const HAIR_COLORS = ['#2B2330','#4A2C1A','#7A3E1D','#C9822B','#E8C26A','#E85D9C','#8E5BD6','#2FA8A0','#3B6FE0','#B7BCC8','#D9453D'];
+
+function shuffled(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function starPoints(cx, cy, r){
+  const pts = [];
+  for (let i = 0; i < 10; i++){
+    const rad = i % 2 === 0 ? r : r * 0.45;
+    const ang = -Math.PI / 2 + i * Math.PI / 5;
+    pts.push((cx + rad * Math.cos(ang)).toFixed(1) + ',' + (cy + rad * Math.sin(ang)).toFixed(1));
+  }
+  return pts.join(' ');
+}
+
+/* Flat-vector airline receptionist: light-blue blazer, white shirt,
+   blue patterned neckerchief, blue lanyard, star hair clips. Hair colour is random. */
+function agentSVG(opt){
+  const hair = opt.hair;
+  const bun = opt.style === 'bun';
+  const skin = '#FFDCC2';
+  const crown = opt.crown ? `
+    <g transform="translate(60 14)">
+      <path d="M-15 12 L-17 -4 L-8 3 L0 -8 L8 3 L17 -4 L15 12 Z" fill="#FFC83D" stroke="#F2A900" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle cx="0" cy="-8" r="2.4" fill="#FF8FB8"/><circle cx="-17" cy="-4" r="2" fill="#4DA3FF"/><circle cx="17" cy="-4" r="2" fill="#4DA3FF"/>
+    </g>` : '';
+  const bunShape = bun ? `<circle cx="60" cy="24" r="13" fill="${hair}"/><circle cx="56" cy="20" r="4" fill="#fff" opacity=".18"/>` : '';
+  const hairBack = bun
+    ? `<path d="M30 62 C30 30 90 30 90 62 L90 74 Q90 78 86 78 L34 78 Q30 78 30 74 Z" fill="${hair}"/>`
+    : `<path d="M22 64 C22 24 98 24 98 64 L98 94 Q98 102 90 102 L30 102 Q22 102 22 94 Z" fill="${hair}"/>`;
+  return `<svg viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="cartoon airline agent">
+    ${bunShape}
+    ${hairBack}
+    <rect x="52" y="86" width="16" height="20" rx="6" fill="${skin}"/>
+    <path d="M14 150 L14 124 Q14 104 40 100 L80 100 Q106 104 106 124 L106 150 Z" fill="#8EC5F0"/>
+    <path d="M47 100 L60 130 L73 100 Z" fill="#FFFFFF"/>
+    <path d="M42 100 L60 134 L49 138 L33 110 Z" fill="#6FAEE0"/>
+    <path d="M78 100 L60 134 L71 138 L87 110 Z" fill="#6FAEE0"/>
+    <circle cx="60" cy="138" r="1.8" fill="#fff" opacity=".9"/>
+    <path d="M45 100 Q60 112 75 100 L60 122 Z" fill="#3B7DD8"/>
+    <circle cx="54" cy="105" r="1.5" fill="#fff"/><circle cx="66" cy="105" r="1.5" fill="#fff"/><circle cx="60" cy="111" r="1.5" fill="#fff"/><circle cx="60" cy="104" r="1" fill="#BFE0FF"/>
+    <path d="M42 98 L56 150 M78 98 L64 150" stroke="#2F6FE0" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+    <rect x="51" y="132" width="18" height="16" rx="3" fill="#fff" stroke="#2F6FE0" stroke-width="1.5"/>
+    <rect x="51" y="132" width="18" height="5" rx="2" fill="#2F6FE0"/>
+    <circle cx="60" cy="142" r="2.6" fill="#BFE0FF"/>
+    <ellipse cx="60" cy="62" rx="28" ry="30" fill="${skin}"/>
+    <path d="M31 60 C30 28 90 28 89 60 C82 50 70 44 62 37 C56 46 42 52 31 60 Z" fill="${hair}"/>
+    <path d="M40 42 C48 36 58 34 66 35" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".22" fill="none"/>
+    <circle cx="49" cy="67" r="3.4" fill="#2B2B3A"/><circle cx="71" cy="67" r="3.4" fill="#2B2B3A"/>
+    <circle cx="50.2" cy="65.8" r="1.2" fill="#fff"/><circle cx="72.2" cy="65.8" r="1.2" fill="#fff"/>
+    <ellipse cx="42" cy="77" rx="5" ry="3.2" fill="#FF9FB8" opacity=".55"/>
+    <ellipse cx="78" cy="77" rx="5" ry="3.2" fill="#FF9FB8" opacity=".55"/>
+    <path d="M54 78 Q60 85 66 78" stroke="#C0504D" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    <polygon points="${starPoints(37, 46, 7)}" fill="#FF8FB8" stroke="#fff" stroke-width="1"/>
+    <polygon points="${starPoints(84, 50, 6)}" fill="#4DA3FF" stroke="#fff" stroke-width="1"/>
+    ${crown}
+  </svg>`;
+}
+
+function randomAgent(extra){
+  const hair = HAIR_COLORS[Math.floor(Math.random() * HAIR_COLORS.length)];
+  return agentSVG(Object.assign({ hair, style: Math.random() < 0.5 ? 'bun' : 'bob' }, extra || {}));
+}
+
+/* ================= Podium ================= */
+function podiumHTML(list){
+  const top = list.slice(0, 3);
+  if (!top.length) return '';
+  const hairs = shuffled(HAIR_COLORS);
+  const styles = shuffled(['bob','bun','bob']);
+  const slots = [ {rank:2, i:1}, {rank:1, i:0}, {rank:3, i:2} ];
+  let cols = '';
+  for (const s of slots){
+    const a = top[s.i];
+    if (!a) continue;
+    const svg = agentSVG({ hair: hairs[s.i], style: styles[s.i], crown: s.rank === 1 });
+    cols += `<div class="pcol rank-${s.rank}">
+      <div class="pinfo">
+        <div class="pname" title="${escapeHtml(a.agent)}">${escapeHtml(a.agent)}</div>
+        <div class="pcount">${a.total} <span class="psub">คน</span></div>
+        <div class="psub">เอง ${a.self} · ให้คนอื่น ${a.forOthers}</div>
+      </div>
+      <div class="pchar">${svg}</div>
+      <div class="pblock"><span class="pnum">${s.rank}</span></div>
+    </div>`;
+  }
+  const star = (c) => `<svg class="stage-deco ${c}" viewBox="0 0 24 24"><polygon points="${starPoints(12,12,11)}" fill="#FFC83D"/></svg>`;
+  return `<div class="stage">
+    <div class="flap-board"><span>TOP 3 AGENTS</span><span class="dots"><i></i><i></i><i></i></span></div>
+    ${star('l')}${star('r')}
+    <div class="podium">${cols}</div>
+  </div>`;
+}
+
+/* ================= File handling ================= */
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown', (e) => { if(e.key==='Enter' || e.key===' ') fileInput.click(); });
+['dragenter','dragover'].forEach(evt => dropzone.addEventListener(evt, (e) => {
+  e.preventDefault(); dropzone.classList.add('drag');
+}));
+['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, (e) => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+}));
+dropzone.addEventListener('drop', (e) => {
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (f) handleFile(f);
+});
+clearBtn.addEventListener('click', resetAll);
+
+function resetAll(){
+  fileInput.value = '';
+  filebar.style.display = 'none';
+  errorBox.innerHTML = '';
+  resultsEl.style.display = 'none';
+  resultsEl.innerHTML = '';
+  flightTag.style.display = 'none';
+  currentNotPrinted = [];
+  currentAgentSummary = [];
+}
+
+function showError(msg){
+  errorBox.innerHTML = `<div class="error">${msg}</div>`;
+  resultsEl.style.display = 'none';
+}
+
+function handleFile(file){
+  errorBox.innerHTML = '';
+  fileNameEl.textContent = file.name;
+  filebar.style.display = 'flex';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const rows = parseXlsXml(e.target.result);
+      if (rows.length === 0) throw new Error('ไม่พบข้อมูลในไฟล์นี้');
+      processRows(rows);
+    }catch(err){
+      console.error(err);
+      showError('ไม่สามารถอ่านไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์ EventsLog รูปแบบเดิม (' + (err.message||'') + ')');
+    }
+  };
+  reader.onerror = () => showError('อ่านไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง');
+  reader.readAsText(file, 'utf-8');
+}
+
+function parseXlsXml(text){
+  const doc = new DOMParser().parseFromString(text, 'text/xml');
+  const perr = doc.getElementsByTagName('parsererror');
+  if (perr && perr.length) throw new Error('รูปแบบไฟล์ XML ไม่ถูกต้อง');
+
+  let rowNodes = doc.getElementsByTagNameNS(NS, 'Row');
+  if (!rowNodes || rowNodes.length === 0) rowNodes = doc.getElementsByTagName('Row');
+  if (!rowNodes || rowNodes.length === 0) throw new Error('ไม่พบตารางข้อมูล (Row) ในไฟล์');
+
+  const allRows = [];
+  for (const row of rowNodes){
+    let cells = row.getElementsByTagNameNS ? row.getElementsByTagNameNS(NS,'Cell') : null;
+    if (!cells || cells.length === 0) cells = row.getElementsByTagName('Cell');
+    const values = [];
+    let idx = 0;
+    for (const cell of cells){
+      let idxAttr = cell.getAttributeNS ? cell.getAttributeNS(NS, 'Index') : null;
+      if (!idxAttr) idxAttr = cell.getAttribute('ss:Index');
+      if (idxAttr) idx = parseInt(idxAttr, 10) - 1;
+      while (values.length < idx) values.push('');
+      let dataEl = cell.getElementsByTagNameNS ? cell.getElementsByTagNameNS(NS,'Data')[0] : null;
+      if (!dataEl) dataEl = cell.getElementsByTagName('Data')[0];
+      values.push(dataEl ? dataEl.textContent : '');
+      idx++;
+    }
+    while (values.length < 7) values.push('');
+    allRows.push(values);
+  }
+  return allRows;
+}
+
+function processRows(rows){
+  const checkinRe = /^Passenger (.+?) \((?:ADL|CHD|INF)\) checked-in\. Dest: \S+, cabin code: \S+, status: [^,]+, seat number: (\S+)/;
+  const printRe = /^Boarding pass for (.+?) printed out\. Seat on boarding pass: (\S+)/;
+  const reseatRe = /^Manual allocated seat change for passenger (.+?)\. Reallocated seat: (\S+)\(/;
+  const webAgentRe = /^WEBREG/i;
+
+  const checkedIn = {};        // seq -> [name, seat, agent]
+  const printAgentBySeq = {};  // seq -> last agent who printed the boarding pass
+
+  for (const r of rows){
+    const agent = r[0], no = r[3], op = r[4];
+    if (!op) continue;
+
+    if (agent){
+      const m = checkinRe.exec(op);
+      if (m && no){
+        checkedIn[no] = [m[1], m[2], agent];
+      }
+      if (agent && webAgentRe.test(agent.trim())){
+        const m2 = reseatRe.exec(op);
+        if (m2 && no && checkedIn[no]) checkedIn[no][1] = m2[2];
+      }
+    }
+
+    const m3 = printRe.exec(op);
+    if (m3 && no && agent){
+      printAgentBySeq[no] = agent; // last print wins (handles reprints)
+    }
+  }
+  const printedSeqs = new Set(Object.keys(printAgentBySeq));
+
+  // not-printed list: only among WEBREG (online) check-ins
+  const notPrinted = [];
+  for (const seq in checkedIn){
+    const [name, seat, agent] = checkedIn[seq];
+    if (webAgentRe.test(agent.trim()) && !printedSeqs.has(seq)){
+      notPrinted.push({ seq, name, seat });
+    }
+  }
+  notPrinted.sort((a,b) => (parseInt(a.seq,10)||999999) - (parseInt(b.seq,10)||999999));
+
+  // agent summary: every checked-in passenger is credited to exactly ONE agent —
+  // the one who printed their boarding pass, or (if not yet printed) the agent
+  // who originally checked them in. So counts across all agents sum to the
+  // total number of checked-in passengers, no double counting.
+  const selfCounts = {};
+  const forOthersCounts = {};
+  for (const seq in checkedIn){
+    const [, , origAgent] = checkedIn[seq];
+    const finalAgent = printAgentBySeq[seq] || origAgent;
+    if (finalAgent === origAgent){
+      selfCounts[finalAgent] = (selfCounts[finalAgent] || 0) + 1;
+    } else {
+      forOthersCounts[finalAgent] = (forOthersCounts[finalAgent] || 0) + 1;
+    }
+  }
+  const allAgents = new Set([...Object.keys(selfCounts), ...Object.keys(forOthersCounts)]);
+  const agentSummary = Array.from(allAgents).map(agent => {
+    const self = selfCounts[agent] || 0;
+    const forOthers = forOthersCounts[agent] || 0;
+    return { agent, self, forOthers, total: self + forOthers, isWeb: webAgentRe.test(agent.trim()) };
+  });
+  agentSummary.sort((a,b) => b.total - a.total);
+
+  // flight label from title row
+  let flightLabel = '';
+  if (rows[0] && rows[0][0]) flightLabel = rows[0][0].trim();
+  currentFlightLabel = flightLabel;
+  if (flightLabel){
+    flightTag.style.display = 'inline-block';
+    flightTag.innerHTML = '<b>' + escapeHtml(flightLabel) + '</b>';
+  } else {
+    flightTag.style.display = 'none';
+  }
+
+  currentNotPrinted = notPrinted;
+  currentAgentSummary = agentSummary;
+
+  const totalCheckin = Object.keys(checkedIn).length;
+  const onlineCheckinCount = Object.values(checkedIn)
+    .filter(([, , agent]) => webAgentRe.test(agent.trim())).length;
+
+  renderResults({
+    totalCheckin, onlineCheckinCount, printTotal: printedSeqs.size,
+    notPrinted, agentSummary
+  });
+}
+
+function renderResults(d){
+  resultsEl.style.display = 'block';
+
+  let html = '';
+  html += `<div class="stats">
+    <div class="stat"><div class="num">${d.totalCheckin}</div><div class="label">เช็คอินทั้งหมด (ออนไลน์+เคาน์เตอร์)</div></div>
+    <div class="stat"><div class="num">${d.onlineCheckinCount}</div><div class="label">เช็คอินออนไลน์</div></div>
+    <div class="stat"><div class="num ok">${d.printTotal}</div><div class="label">รายการ print แล้ว</div></div>
+    <div class="stat"><div class="num ${d.notPrinted.length? 'danger':'ok'}">${d.notPrinted.length}</div><div class="label">ออนไลน์ที่ยังไม่ print</div></div>
+  </div>`;
+
+  html += `<div class="toolbar">
+    <div class="tabs">
+      <button class="tab-btn active" id="tabBtnNotPrinted">ยังไม่ Print (${d.notPrinted.length})</button>
+      <button class="tab-btn" id="tabBtnAgent">สรุปตาม Agent</button>
+    </div>
+    <button class="btn btn-primary" id="downloadXlsxBtn">ดาวน์โหลด Excel (2 sheet)</button>
+  </div>`;
+
+  // --- Tab: Not printed ---
+  html += `<div class="tab-panel active" id="panelNotPrinted">
+    <div class="section-head">
+      <h2>รายชื่อที่ยังไม่ print</h2>
+      <span class="sub">เรียงตามลำดับ seq</span>
+    </div>`;
+  if (d.notPrinted.length === 0){
+    html += `<div class="board"><div class="empty-ok"><div class="mascot">${randomAgent({ style:'bob' })}</div><div class="big">0</div>ทุกคนที่เช็คอินออนไลน์ print boarding pass เรียบร้อยแล้ว</div></div>`;
+  } else {
+    html += `<div class="board"><table>
+      <thead><tr><th class="num-col">Seq</th><th>ชื่อผู้โดยสาร</th><th>Seat</th></tr></thead>
+      <tbody>`;
+    for (const p of d.notPrinted){
+      html += `<tr>
+        <td class="seq num-col">${escapeHtml(p.seq)}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td class="seat">${escapeHtml(p.seat)}</td>
+      </tr>`;
+    }
+    html += `</tbody></table></div>
+    <div class="actions">
+      <button class="btn btn-ghost" id="copyNotPrintedBtn">คัดลอกรายชื่อ</button>
+    </div>`;
+  }
+  html += `</div>`;
+
+  // --- Tab: Agent summary ---
+  const maxTotal = d.agentSummary.length ? d.agentSummary[0].total : 1;
+  const totalAll = d.agentSummary.reduce((s,a)=>s+a.total,0);
+  html += `<div class="tab-panel" id="panelAgent">
+    <div class="section-head">
+      <h2>จำนวนที่เช็คอินต่อ Agent</h2>
+      <span class="sub">นับแต่ละคนครั้งเดียว รวมทั้งหมด = จำนวนเช็คอินทั้งหมด (${totalAll}) · เรียงจากมากไปน้อย</span>
+    </div>
+    ${podiumHTML(d.agentSummary)}
+    <div class="board"><table>
+      <thead><tr><th></th><th>Agent</th><th class="num-col">เช็คอินเอง</th><th class="num-col">ปริ้นให้คนอื่น</th><th class="num-col">รวม</th><th></th></tr></thead>
+      <tbody>`;
+  const medals = ['🥇','🥈','🥉'];
+  d.agentSummary.forEach((a, idx) => {
+    const pct = Math.round((a.total / maxTotal) * 100);
+    html += `<tr>
+      <td class="rank">${idx < 3 ? medals[idx] : (idx + 1)}</td>
+      <td>${escapeHtml(a.agent)}${a.isWeb ? '<span class="badge">ออนไลน์</span>' : ''}</td>
+      <td class="count num-col">${a.self}</td>
+      <td class="count num-col">${a.forOthers}</td>
+      <td class="count num-col">${a.total}</td>
+      <td style="width:110px;"><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div></td>
+    </tr>`;
+  });
+  const totalSelfCol = d.agentSummary.reduce((s,a)=>s+a.self,0);
+  const totalForOthersCol = d.agentSummary.reduce((s,a)=>s+a.forOthers,0);
+  html += `<tr class="total-row"><td></td><td>รวมทั้งหมด</td><td class="count num-col">${totalSelfCol}</td><td class="count num-col">${totalForOthersCol}</td><td class="count num-col">${totalAll}</td><td></td></tr>`;
+  html += `</tbody></table></div>
+    <div class="actions">
+      <button class="btn btn-ghost" id="copyAgentBtn">คัดลอกตาราง</button>
+    </div>
+  </div>`;
+
+  resultsEl.innerHTML = html;
+
+  document.getElementById('tabBtnNotPrinted').addEventListener('click', () => switchTab('NotPrinted'));
+  document.getElementById('tabBtnAgent').addEventListener('click', () => switchTab('Agent'));
+  document.getElementById('downloadXlsxBtn').addEventListener('click', downloadXlsx);
+  const cp1 = document.getElementById('copyNotPrintedBtn');
+  if (cp1) cp1.addEventListener('click', copyNotPrinted);
+  const cp2 = document.getElementById('copyAgentBtn');
+  if (cp2) cp2.addEventListener('click', copyAgentSummary);
+}
+
+function switchTab(name){
+  document.getElementById('tabBtnNotPrinted').classList.toggle('active', name==='NotPrinted');
+  document.getElementById('tabBtnAgent').classList.toggle('active', name==='Agent');
+  document.getElementById('panelNotPrinted').classList.toggle('active', name==='NotPrinted');
+  document.getElementById('panelAgent').classList.toggle('active', name==='Agent');
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function baseFilename(){
+  return (currentFlightLabel ? currentFlightLabel.replace(/[^\w.\-]+/g,'_') : 'checkin_report');
+}
+
+async function offerDownload(filename, blob){
+  try{
+    const downloads = await claude.use('downloads');
+    if (!downloads) throw new Error('unavailable');
+    await downloads.save({ filename, data: blob });
+    showToast('ดาวน์โหลดไฟล์แล้ว');
+  }catch(err){
+    try{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }catch(e2){
+      showToast('ไม่สามารถดาวน์โหลดไฟล์ได้ในมุมมองนี้');
+    }
+  }
+}
+
+async function downloadXlsx(){
+  if (typeof XLSX === 'undefined'){
+    showToast('โหลดไลบรารี Excel ไม่สำเร็จ ลองรีเฟรชหน้านี้');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+
+  const npAoa = [['Seq','Name','Seat']];
+  for (const p of currentNotPrinted) npAoa.push([p.seq, p.name, p.seat]);
+  const ws1 = XLSX.utils.aoa_to_sheet(npAoa);
+  ws1['!cols'] = [{wch:8},{wch:32},{wch:8}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'ยังไม่ Print');
+
+  const agAoa = [['Agent','เช็คอินเอง','ปริ้นให้คนอื่น','รวม','ประเภท']];
+  let totalCk = 0, totalPr = 0, totalAll = 0;
+  for (const a of currentAgentSummary){
+    agAoa.push([a.agent, a.self, a.forOthers, a.total, a.isWeb ? 'ออนไลน์ (WEB)' : 'เคาน์เตอร์']);
+    totalCk += a.self; totalPr += a.forOthers; totalAll += a.total;
+  }
+  agAoa.push(['รวมทั้งหมด', totalCk, totalPr, totalAll, '']);
+  const ws2 = XLSX.utils.aoa_to_sheet(agAoa);
+  ws2['!cols'] = [{wch:28},{wch:12},{wch:14},{wch:10},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'สรุปตาม Agent');
+
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
+  await offerDownload(baseFilename() + '.xlsx', blob);
+}
+
+function copyNotPrinted(){
+  const text = currentNotPrinted.map(p => `${p.seq}\t${p.name}\t${p.seat}`).join('\n');
+  navigator.clipboard.writeText(text).then(() => showToast('คัดลอกรายชื่อแล้ว'))
+    .catch(() => showToast('คัดลอกไม่สำเร็จ'));
+}
+
+function copyAgentSummary(){
+  const text = currentAgentSummary.map(a => `${a.agent}\t${a.self}\t${a.forOthers}\t${a.total}\t${a.isWeb?'ออนไลน์':'เคาน์เตอร์'}`).join('\n');
+  navigator.clipboard.writeText(text).then(() => showToast('คัดลอกตารางแล้ว'))
+    .catch(() => showToast('คัดลอกไม่สำเร็จ'));
+}
+
+let toastTimer;
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+// hero mascot (random hair every page load)
+document.getElementById('heroMascot').innerHTML = randomAgent({ style:'bob' });
+</script>
+</body>
+</html>
